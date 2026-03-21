@@ -1,0 +1,14 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+	<qresource prefix="/">
+		<file>src/gui/style.qss</file>
+	</qresource>
+
+	<qresource prefix="/qml">
+		<file alias="PieChart.qml">src/qml/PieChart.qml</file>
+	</qresource>
+
+	<qresource prefix="/icons">
+		<file alias="app_icon.ico">assets/app_icon.ico</file>
+	</qresource>
+</RCC>

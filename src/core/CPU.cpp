@@ -80,23 +80,26 @@ void CPU::step()
     _cycles++;
 
     int rawOpcode = _instructionReg / 1000;
-    int address = _instructionReg % 1000;
-    Opcode opcode = static_cast<Opcode>(rawOpcode);
+    const Config::InstructionDef* def = Config::getInstructionDef(rawOpcode);
+    if (def == nullptr)
+    {
+        throw std::runtime_error("Unknown opcode: " + std::to_string(rawOpcode));
+	}
 
+    int address = _instructionReg % 1000;
+    if (!(def->hasOperand) && address != 0)
+    {
+        throw std::runtime_error("Instruction " + std::string(def->name) + " has no operand" +
+			" but got operand " + std::to_string(address));
+    }
+
+    Opcode opcode = static_cast<Opcode>(rawOpcode);
     switch (opcode)
     {
     case Opcode::HLT:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for HLT");
-        }
         _halted = true;
         break;
     case Opcode::NOP:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for NOP");
-        }
         break;
     case Opcode::LDA:
         setAccumulator(readMemory(address));
@@ -105,17 +108,9 @@ void CPU::step()
         writeMemory(address, _accumulator);
         break;
     case Opcode::INP:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for INP");
-        }
         _waitingForInput = true;
         break;
     case Opcode::OUT:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for OUT");
-        }
         _outputBuffer.push_back(_accumulator);
         break;
     case Opcode::ADD:
@@ -150,25 +145,27 @@ void CPU::step()
     case Opcode::MULI:
         setAccumulator(_accumulator * address);
         break;
-    case Opcode::CMA:
-        if (address != 0)
+	case Opcode::DIVI:
+        if (address == 0)
         {
-            throw std::runtime_error("Invalid operand for CMA");
+            throw std::runtime_error("Division by zero");
         }
+        setAccumulator(_accumulator / address);
+		break;
+    case Opcode::MODI:
+        if (address == 0)
+        {
+            throw std::runtime_error("Modulo by zero");
+        }
+        setAccumulator(_accumulator % address);
+		break;
+    case Opcode::CMA:
         setAccumulator(-_accumulator);
         break;
     case Opcode::INC:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for INC");
-        }
         setAccumulator(_accumulator + 1);
         break;
     case Opcode::DEC:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for DEC");
-        }
         setAccumulator(_accumulator - 1);
         break;
     case Opcode::BRA:
@@ -199,18 +196,10 @@ void CPU::step()
         }
         break;
     case Opcode::PUSH:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for PUSH");
-        }
         writeMemory(_stackPointer, _accumulator);
         _stackPointer--;
         break;
     case Opcode::POP:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for POP");
-        }
         _stackPointer++;
         setAccumulator(readMemory(_stackPointer));
         break;
@@ -220,10 +209,6 @@ void CPU::step()
         _programCounter = address;
         break;
     case Opcode::RET:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for RET");
-        }
         _stackPointer++;
         _programCounter = readMemory(_stackPointer);
         break;
@@ -237,17 +222,9 @@ void CPU::step()
         _indexReg = address;
         break;
     case Opcode::INX:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for INX");
-        }
         _indexReg++;
         break;
     case Opcode::DEX:
-        if (address != 0)
-        {
-            throw std::runtime_error("Invalid operand for DEX");
-        }
         _indexReg--;
         break;
     case Opcode::LDAX:
@@ -262,6 +239,19 @@ void CPU::step()
     case Opcode::SUBX:
         setAccumulator(_accumulator - readMemory(address + _indexReg));
         break;
+	case Opcode::MULX:
+        setAccumulator(_accumulator * readMemory(address + _indexReg));
+		break;
+    case Opcode::DIVX:
+    {
+        int divisor = readMemory(address + _indexReg);
+        if (divisor == 0)
+        {
+            throw std::runtime_error("Division by zero");
+        }
+        setAccumulator(_accumulator / divisor);
+        break;
+    }
     default:
         throw std::runtime_error("Unknown opcode");
     }

@@ -1,6 +1,7 @@
-#include <QApplication>
-#include <QWidget>
-#include "core/Computer.h"
+﻿#include <QApplication>
+#include <QFile>
+#include <QTextStream>
+#include <QStyleFactory>
 #include "gui/mainwindow.h"
 #include <iostream>
 
@@ -8,37 +9,25 @@ int main(int argc, char* argv[])
 {
     QApplication app(argc, argv);
 
-    Computer computer{};
+    app.setStyle(QStyleFactory::create("Fusion"));
 
-    std::vector<int> program{18000, 11900, 18000, 20900, 19000, 0};
-	// INP, STA 900, INP, ADD 900, OUT, HLT
-
-    computer.loadProgram(program);
-
-    while (!computer.getCPU().isHalted())
+    QFile styleFile(":/src/gui/style.qss");
+    if (styleFile.open(QFile::ReadOnly | QFile::Text))
     {
-        if (computer.getCPU().isWaitingForInput())
-        {
-            int inputVal;
-            std::cout << "Input: ";
-            std::cin >> inputVal;
-            computer.provideInput(inputVal);
-        }
-        else
-        {
-            computer.step();
-        }
+        QTextStream stream(&styleFile);
+        app.setStyleSheet(stream.readAll());
+        styleFile.close();
+    }
+    else
+    {
+        std::cerr << "Warning: Could not load style.qss" << std::endl;
     }
 
-    std::cout << "Program halted" << std::endl;
+    app.setWindowIcon(QIcon(":/icons/app_icon.ico"));
 
-    for (int val : computer.getCPU().getOutputBuffer())
-    {
-        std::cout << "Ouput buffer: " << val << std::endl;
-    }
-
- //   MainWindow mainWindow{};
-	//mainWindow.show();
+    MainWindow mainWindow;
+	mainWindow.setWindowTitle("Decimal Computer Emulator");
+	mainWindow.show();
 
     return app.exec();
 }
