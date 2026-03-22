@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "Config.h"
 
 class Memory;
 
@@ -37,11 +38,17 @@ private:
     bool _halted;
     bool _waitingForInput;
     bool _overflowFlag;
+
     int _cycles;
+    int _statALU;
+    int _statMemory;
+    int _statControl;
+    int _statIO;
 
     std::vector<int> _outputBuffer;
 
     void setAccumulator(int value);
     int readMemory(int address) const;
     void writeMemory(int address, int value);
+    void updateStats(Config::InstType type);
 };

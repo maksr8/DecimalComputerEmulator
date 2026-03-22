@@ -1,5 +1,4 @@
 #include "CPU.h"
-#include "Config.h"
 #include "Memory.h"
 #include <stdexcept>
 #include <cmath>
@@ -15,6 +14,10 @@ CPU::CPU(Memory& mem) :
     _waitingForInput{ false },
     _overflowFlag{ false },
     _cycles{ 0 },
+    _statALU{ 0 },
+    _statMemory{ 0 },
+    _statControl{ 0 },
+    _statIO{ 0 },
     _outputBuffer{}
 {
 }
@@ -30,6 +33,10 @@ void CPU::reset()
     _waitingForInput = false;
     _overflowFlag = false;
     _cycles = 0;
+    _statALU = 0;
+    _statMemory = 0;
+    _statControl = 0;
+    _statIO = 0;
     _outputBuffer.clear();
 }
 
@@ -68,6 +75,25 @@ void CPU::writeMemory(int address, int value)
     _memory.write(address, value);
 }
 
+void CPU::updateStats(Config::InstType type)
+{
+    switch (type)
+    {
+    case Config::InstType::ALU:
+        _statALU++;
+        break;
+    case Config::InstType::MEMORY:
+        _statMemory++;
+        break;
+    case Config::InstType::CONTROL:
+        _statControl++;
+        break;
+    case Config::InstType::IO:
+        _statIO++;
+        break;
+    }
+}
+
 void CPU::step()
 {
     if (_halted || _waitingForInput)
@@ -85,6 +111,7 @@ void CPU::step()
     {
         throw std::runtime_error("Unknown opcode: " + std::to_string(rawOpcode));
 	}
+	updateStats(def->type);
 
     int address = _instructionReg % 1000;
     if (!(def->hasOperand) && address != 0)
@@ -93,156 +120,156 @@ void CPU::step()
 			" but got operand " + std::to_string(address));
     }
 
-    Opcode opcode = static_cast<Opcode>(rawOpcode);
+    Config::Opcode opcode = static_cast<Config::Opcode>(rawOpcode);
     switch (opcode)
     {
-    case Opcode::HLT:
+    case Config::Opcode::HLT:
         _halted = true;
         break;
-    case Opcode::NOP:
+    case Config::Opcode::NOP:
         break;
-    case Opcode::LDA:
+    case Config::Opcode::LDA:
         setAccumulator(readMemory(address));
         break;
-    case Opcode::STA:
+    case Config::Opcode::STA:
         writeMemory(address, _accumulator);
         break;
-    case Opcode::INP:
+    case Config::Opcode::INP:
         _waitingForInput = true;
         break;
-    case Opcode::OUT:
+    case Config::Opcode::OUT:
         _outputBuffer.push_back(_accumulator);
         break;
-    case Opcode::ADD:
+    case Config::Opcode::ADD:
         setAccumulator(_accumulator + readMemory(address));
         break;
-    case Opcode::SUB:
+    case Config::Opcode::SUB:
         setAccumulator(_accumulator - readMemory(address));
         break;
-    case Opcode::MUL:
+    case Config::Opcode::MUL:
         setAccumulator(_accumulator * readMemory(address));
         break;
-    case Opcode::DIV:
+    case Config::Opcode::DIV:
         if (readMemory(address) == 0)
         {
             throw std::runtime_error("Division by zero");
         }
         setAccumulator(_accumulator / readMemory(address));
         break;
-    case Opcode::MOD:
+    case Config::Opcode::MOD:
         if (readMemory(address) == 0)
         {
             throw std::runtime_error("Modulo by zero");
         }
         setAccumulator(_accumulator % readMemory(address));
         break;
-    case Opcode::ADDI:
+    case Config::Opcode::ADDI:
         setAccumulator(_accumulator + address);
         break;
-    case Opcode::SUBI:
+    case Config::Opcode::SUBI:
         setAccumulator(_accumulator - address);
         break;
-    case Opcode::MULI:
+    case Config::Opcode::MULI:
         setAccumulator(_accumulator * address);
         break;
-	case Opcode::DIVI:
+	case Config::Opcode::DIVI:
         if (address == 0)
         {
             throw std::runtime_error("Division by zero");
         }
         setAccumulator(_accumulator / address);
 		break;
-    case Opcode::MODI:
+    case Config::Opcode::MODI:
         if (address == 0)
         {
             throw std::runtime_error("Modulo by zero");
         }
         setAccumulator(_accumulator % address);
 		break;
-    case Opcode::CMA:
+    case Config::Opcode::CMA:
         setAccumulator(-_accumulator);
         break;
-    case Opcode::INC:
+    case Config::Opcode::INC:
         setAccumulator(_accumulator + 1);
         break;
-    case Opcode::DEC:
+    case Config::Opcode::DEC:
         setAccumulator(_accumulator - 1);
         break;
-    case Opcode::BRA:
+    case Config::Opcode::BRA:
         _programCounter = address;
         break;
-    case Opcode::BRZ:
+    case Config::Opcode::BRZ:
         if (_accumulator == 0)
         {
             _programCounter = address;
         }
         break;
-    case Opcode::BRP:
+    case Config::Opcode::BRP:
         if (_accumulator > 0)
         {
             _programCounter = address;
         }
         break;
-    case Opcode::BRN:
+    case Config::Opcode::BRN:
         if (_accumulator < 0)
         {
             _programCounter = address;
         }
         break;
-    case Opcode::BRO:
+    case Config::Opcode::BRO:
         if (_overflowFlag)
         {
             _programCounter = address;
         }
         break;
-    case Opcode::PUSH:
+    case Config::Opcode::PUSH:
         writeMemory(_stackPointer, _accumulator);
         _stackPointer--;
         break;
-    case Opcode::POP:
+    case Config::Opcode::POP:
         _stackPointer++;
         setAccumulator(readMemory(_stackPointer));
         break;
-    case Opcode::CALL:
+    case Config::Opcode::CALL:
         writeMemory(_stackPointer, _programCounter);
         _stackPointer--;
         _programCounter = address;
         break;
-    case Opcode::RET:
+    case Config::Opcode::RET:
         _stackPointer++;
         _programCounter = readMemory(_stackPointer);
         break;
-    case Opcode::LDX:
+    case Config::Opcode::LDX:
         _indexReg = readMemory(address);
         break;
-    case Opcode::STX:
+    case Config::Opcode::STX:
         writeMemory(address, _indexReg);
         break;
-    case Opcode::LDXI:
+    case Config::Opcode::LDXI:
         _indexReg = address;
         break;
-    case Opcode::INX:
+    case Config::Opcode::INX:
         _indexReg++;
         break;
-    case Opcode::DEX:
+    case Config::Opcode::DEX:
         _indexReg--;
         break;
-    case Opcode::LDAX:
+    case Config::Opcode::LDAX:
         setAccumulator(readMemory(address + _indexReg));
         break;
-    case Opcode::STAX:
+    case Config::Opcode::STAX:
         writeMemory(address + _indexReg, _accumulator);
         break;
-    case Opcode::ADDX:
+    case Config::Opcode::ADDX:
         setAccumulator(_accumulator + readMemory(address + _indexReg));
         break;
-    case Opcode::SUBX:
+    case Config::Opcode::SUBX:
         setAccumulator(_accumulator - readMemory(address + _indexReg));
         break;
-	case Opcode::MULX:
+	case Config::Opcode::MULX:
         setAccumulator(_accumulator * readMemory(address + _indexReg));
 		break;
-    case Opcode::DIVX:
+    case Config::Opcode::DIVX:
     {
         int divisor = readMemory(address + _indexReg);
         if (divisor == 0)
