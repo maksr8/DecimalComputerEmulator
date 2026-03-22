@@ -53,15 +53,19 @@ void CPU::clearOutput()
 
 void CPU::setAccumulator(int value)
 {
-    if (std::abs(value) >= Config::OVERFLOW_LIMIT)
+    _accumulator = value % Config::OVERFLOW_LIMIT;
+    if (_currentInstructionDef != nullptr && _currentInstructionDef->type == Config::InstType::ALU)
     {
-        _overflowFlag = true;
-        _accumulator = value % Config::OVERFLOW_LIMIT;
+        _overflowFlag = (std::abs(value) >= Config::OVERFLOW_LIMIT);
     }
-    else
+}
+void CPU::setIndexRegister(int value)
+{
+    _indexReg = value % Config::OVERFLOW_LIMIT;
+
+    if (_currentInstructionDef != nullptr && _currentInstructionDef->type == Config::InstType::ALU)
     {
-        _overflowFlag = false;
-        _accumulator = value;
+        _overflowFlag = (std::abs(value) >= Config::OVERFLOW_LIMIT);
     }
 }
 
@@ -106,17 +110,17 @@ void CPU::step()
     _cycles++;
 
     int rawOpcode = _instructionReg / 1000;
-    const Config::InstructionDef* def = Config::getInstructionDef(rawOpcode);
-    if (def == nullptr)
+    _currentInstructionDef = Config::getInstructionDef(rawOpcode);
+    if (_currentInstructionDef == nullptr)
     {
         throw std::runtime_error("Unknown opcode: " + std::to_string(rawOpcode));
 	}
-	updateStats(def->type);
+	updateStats(_currentInstructionDef->type);
 
     int address = _instructionReg % 1000;
-    if (!(def->hasOperand) && address != 0)
+    if (!(_currentInstructionDef->hasOperand) && address != 0)
     {
-        throw std::runtime_error("Instruction " + std::string(def->name) + " has no operand" +
+        throw std::runtime_error("Instruction " + std::string(_currentInstructionDef->name) + " has no operand" +
 			" but got operand " + std::to_string(address));
     }
 
@@ -246,13 +250,13 @@ void CPU::step()
         writeMemory(address, _indexReg);
         break;
     case Config::Opcode::LDXI:
-        _indexReg = address;
+		setIndexRegister(address);
         break;
     case Config::Opcode::INX:
-        _indexReg++;
+        setIndexRegister(_indexReg + 1);
         break;
     case Config::Opcode::DEX:
-        _indexReg--;
+        setIndexRegister(_indexReg - 1);
         break;
     case Config::Opcode::LDAX:
         setAccumulator(readMemory(address + _indexReg));
@@ -332,4 +336,24 @@ bool CPU::isOverflow() const
 int CPU::getCycles() const
 {
     return _cycles;
+}
+
+int CPU::getStatALU() const
+{
+    return _statALU;
+}
+
+int CPU::getStatMemory() const
+{
+	return _statMemory;
+}
+
+int CPU::getStatControl() const
+{
+	return _statControl;
+}
+
+int CPU::getStatIO() const
+{
+	return _statIO;
 }

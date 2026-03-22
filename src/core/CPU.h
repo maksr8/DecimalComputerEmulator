@@ -26,6 +26,11 @@ public:
     bool isOverflow() const;
     int getCycles() const;
 
+    int getStatALU() const;
+    int getStatMemory() const;
+    int getStatControl() const;
+    int getStatIO() const;
+
 private:
     Memory& _memory;
 
@@ -47,7 +52,10 @@ private:
 
     std::vector<int> _outputBuffer;
 
+    const Config::InstructionDef* _currentInstructionDef;
+
     void setAccumulator(int value);
+    void setIndexRegister(int value);
     int readMemory(int address) const;
     void writeMemory(int address, int value);
     void updateStats(Config::InstType type);
