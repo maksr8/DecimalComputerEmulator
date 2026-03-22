@@ -500,14 +500,14 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_6">
           <item>
-           <widget class="QLabel" name="label_stepDuration">
+           <widget class="QLabel" name="label_minStepDuration">
             <property name="text">
-             <string>Step Duration (ms)</string>
+             <string>Min Step Duration (ms)</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_stepDuration">
+           <widget class="QLineEdit" name="lineEdit_minStepDuration">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -520,7 +520,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QSlider" name="horizontalSlider_stepDuration">
+           <widget class="QSlider" name="horizontalSlider_minStepDuration">
             <property name="enabled">
              <bool>true</bool>
             </property>
@@ -631,8 +631,8 @@
             </property>
             <property name="minimumSize">
              <size>
-              <width>350</width>
-              <height>180</height>
+              <width>300</width>
+              <height>150</height>
              </size>
             </property>
             <property name="resizeMode">
