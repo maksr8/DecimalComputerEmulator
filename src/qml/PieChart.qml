@@ -67,10 +67,10 @@ Rectangle {
                 id: cpuSeries
                 pieSize: 1
                 
-                BaseSlice { id: aluSlice; value: cpuData.alu; color: "#0e639c" }
-                BaseSlice { id: memSlice; value: cpuData.memory; color: "#264f78" }
-                BaseSlice { id: ctrlSlice; value: cpuData.control; color: "#007fd4" }
-                BaseSlice { id: ioSlice; value: cpuData.io; color: "#3f3f46" }
+                BaseSlice { id: aluSlice; value: cpuData ? cpuData.alu : 0; color: "#0e639c" }
+                BaseSlice { id: memSlice; value: cpuData ? cpuData.memory : 0; color: "#264f78" }
+                BaseSlice { id: ctrlSlice; value: cpuData ? cpuData.control : 0; color: "#007fd4" }
+                BaseSlice { id: ioSlice; value: cpuData ? cpuData.io : 0; color: "#3f3f46" }
             }
         }
     }
