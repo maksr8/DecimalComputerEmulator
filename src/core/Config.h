@@ -101,7 +101,7 @@ namespace Config
         {"RET", Opcode::RET, false, InstType::CONTROL},
         {"LDX", Opcode::LDX, true,  InstType::MEMORY},
         {"STX", Opcode::STX, true,  InstType::MEMORY},
-        {"LDXI", Opcode::LDXI, true, InstType::MEMORY},
+        {"LDXI", Opcode::LDXI, true, InstType::ALU},
         {"INX", Opcode::INX, false, InstType::ALU},
         {"DEX", Opcode::DEX, false, InstType::ALU},
         {"LDAX", Opcode::LDAX, true, InstType::MEMORY},
