@@ -2,6 +2,7 @@
 #include <string>
 #include <unordered_map>
 #include <optional>
+#include <array>
 
 namespace Config
 {
@@ -9,6 +10,7 @@ namespace Config
     constexpr int MAX_PROGRAM_SIZE{ 900 };
     constexpr int OVERFLOW_LIMIT{ 100000 };
     constexpr int INITIAL_STACK_POINTER{ 999 };
+    constexpr int MAX_OPCODE{ 99 };
 
     enum class Opcode : int
     {
@@ -112,6 +114,21 @@ namespace Config
         {"DIVX", Opcode::DIVX, true, InstType::ALU}
     };
 
+    constexpr auto buildOpcodeLUT()
+    {
+        std::array<const InstructionDef*, MAX_OPCODE> lut{};
+
+        for (size_t i = 0; i < std::size(INSTRUCTIONS); ++i)
+        {
+            int opcodeIndex = static_cast<int>(INSTRUCTIONS[i].opcode);
+            lut[opcodeIndex] = &INSTRUCTIONS[i];
+        }
+
+        return lut;
+    }
+
+    inline constexpr auto OPCODE_LUT = buildOpcodeLUT();
+
     inline std::optional<std::string_view> getOpcodeName(int opcodeValue)
     {
         for (const auto& def : INSTRUCTIONS)
@@ -124,17 +141,16 @@ namespace Config
         return std::nullopt;
     }
 
-    //to get both name and hasOperand
     inline const InstructionDef* getInstructionDef(int opcodeValue)
     {
-        for (const auto& def : INSTRUCTIONS)
+        if (opcodeValue < 0 || opcodeValue >= MAX_OPCODE)
         {
-            if (static_cast<int>(def.opcode) == opcodeValue) return &def;
+            return nullptr;
         }
-        return nullptr;
+
+        return OPCODE_LUT[opcodeValue];
     }
 
-    //to get both opcode and hasOperand
     inline const InstructionDef* getInstructionDef(std::string_view name)
     {
         for (const auto& def : INSTRUCTIONS)
