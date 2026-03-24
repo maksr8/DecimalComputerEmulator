@@ -35,6 +35,10 @@ qt_add_executable(EmulatorApp
     src/assembler/Disassembler.cpp
 )
 
+set_target_properties(EmulatorApp PROPERTIES
+    WIN32_EXECUTABLE $<$<CONFIG:Release>:TRUE>
+)
+
 target_link_libraries(EmulatorApp PRIVATE EmulatorCore Qt6::Widgets Qt6::QuickWidgets Qt6::Graphs Qt6::Qml)
 target_include_directories(EmulatorApp PRIVATE 
     src 
