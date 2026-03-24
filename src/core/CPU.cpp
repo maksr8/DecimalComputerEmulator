@@ -180,7 +180,7 @@ StepResult CPU::step()
         }
         setAccumulator(_accumulator % address);
 		break;
-    case Config::Opcode::CMA:
+    case Config::Opcode::NEG:
         setAccumulator(-_accumulator);
         break;
     case Config::Opcode::INC:
