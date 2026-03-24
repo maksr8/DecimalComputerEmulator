@@ -55,6 +55,46 @@ MainWindow::~MainWindow()
     delete _ui;
 }
 
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    if (promptSaveIfUnsaved())
+    {
+        event->accept();
+    }
+    else
+    {
+        event->ignore();
+    }
+}
+
+void MainWindow::setUnsavedChanges(bool value)
+{
+    if (_hasUnsavedChanges == value) return;
+
+    _hasUnsavedChanges = value;
+
+    if (_hasUnsavedChanges)
+    {
+        if (_currentFilePath.isEmpty())
+        {
+            setWindowTitle(QString("%1 - %2 *").arg(WINDOW_TITLE_BASE).arg("[Unsaved]"));
+        }
+        else
+        {
+            setWindowTitle(QString("%1 - %2 *").arg(WINDOW_TITLE_BASE).arg(_currentFilePath));
+        }
+    }
+
+    applyStateToUI();
+}
+
+void MainWindow::setBinaryUpToDate(bool value)
+{
+    if (_isBinaryUpToDate == value) return;
+    _isBinaryUpToDate = value;
+    applyStateToUI();
+}
+
 void MainWindow::setupMemoryTables()
 {
     auto setupTable = [this](QTableWidget* table)
@@ -129,57 +169,11 @@ void MainWindow::setupConnections()
     connect(_ui->lineEdit_minStepDuration, &QLineEdit::textChanged, this, &MainWindow::onMinStepDurationChanged);
 }
 
-void MainWindow::updateFullMemoryTable()
-{
-    _ui->tableMemory->setUpdatesEnabled(false);
-    _ui->tableMemory_bottom->setUpdatesEnabled(false);
-
-    for (int i = 0; i < Config::MEMORY_SIZE; ++i)
-    {
-        updateSingleMemoryRow(i);
-    }
-
-    _ui->tableMemory->setUpdatesEnabled(true);
-    _ui->tableMemory_bottom->setUpdatesEnabled(true);
-}
-
 bool MainWindow::isProgramMutableState() const
 {
     return _currentState == AppState::EDITING ||
         _currentState == AppState::IDLE ||
         _currentState == AppState::RUN_FINISHED;
-}
-
-void MainWindow::setUnsavedChanges(bool value)
-{
-    if (_hasUnsavedChanges == value) return;
-
-    _hasUnsavedChanges = value;
-
-    if (_hasUnsavedChanges)
-    {
-        if (_currentFilePath.isEmpty())
-        {
-            setWindowTitle(QString("%1 - %2 *").arg(WINDOW_TITLE_BASE).arg("[Unsaved]"));
-        }
-        else
-        {
-            setWindowTitle(QString("%1 - %2 *").arg(WINDOW_TITLE_BASE).arg(_currentFilePath));
-        }
-    }
-    else
-    {
-        setWindowTitle(QString("%1 - %2").arg(WINDOW_TITLE_BASE).arg(_currentFilePath));
-    }
-
-    applyStateToUI();
-}
-
-void MainWindow::setBinaryUpToDate(bool value)
-{
-    if (_isBinaryUpToDate == value) return;
-    _isBinaryUpToDate = value;
-    applyStateToUI();
 }
 
 void MainWindow::onProgramTextChanged()
@@ -192,6 +186,134 @@ void MainWindow::onProgramTextChanged()
     setUnsavedChanges(true);
     setBinaryUpToDate(false);
     changeState(AppState::EDITING);
+}
+
+void MainWindow::onActionOpen()
+{
+    if (!isProgramMutableState())
+    {
+        assert(false && "Open action triggered in invalid state");
+        return;
+    }
+    if (!promptSaveIfUnsaved())
+    {
+        return;
+    }
+
+    QString fileName = QFileDialog::getOpenFileName(this, "Open Program", "",
+        "Decimal Assembly (*.dasm);;Standard Assembly (*.asm);;Text Files (*.txt);;All Files (*)");
+    if (fileName.isEmpty())
+    {
+        return;
+    }
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QMessageBox::critical(this, "Error", "Could not open file.");
+        return;
+    }
+
+    QTextStream in(&file);
+    _ui->plainTextEdit_program->blockSignals(true);
+    _ui->plainTextEdit_program->setPlainText(in.readAll());
+    _ui->plainTextEdit_program->blockSignals(false);
+    file.close();
+
+    _currentFilePath = fileName;
+
+    setUnsavedChanges(false);
+    setWindowTitle(QString("%1 - %2").arg(WINDOW_TITLE_BASE).arg(_currentFilePath));
+    setBinaryUpToDate(false);
+    changeState(AppState::EDITING);
+}
+
+void MainWindow::onActionSave()
+{
+    if (!isProgramMutableState())
+    {
+        assert(false && "Save action triggered in invalid state");
+        return;
+    }
+    QString fileName = _currentFilePath;
+
+
+    fileName = QFileDialog::getSaveFileName(this, "Save Program", "",
+        "Decimal Assembly(*.dasm);; Standard Assembly(*.asm);; Text Files(*.txt);; All Files(*)");
+    if (fileName.isEmpty())
+    {
+        return;
+    }
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        QMessageBox::critical(this, "Error", "Could not save file.");
+        return;
+    }
+
+    QTextStream out(&file);
+    out << _ui->plainTextEdit_program->toPlainText();
+    file.close();
+
+    _currentFilePath = fileName;
+    setUnsavedChanges(false);
+    setWindowTitle(QString("%1 - %2").arg(WINDOW_TITLE_BASE).arg(_currentFilePath));
+}
+
+void MainWindow::onActionCompile()
+{
+    if (_currentState != AppState::EDITING)
+    {
+        assert(false && "Compile action triggered in invalid state");
+        return;
+    }
+    Assembler assembler;
+    std::string program = _ui->plainTextEdit_program->toPlainText().toStdString();
+
+    AssemblerResult result = assembler.compile(program);
+
+    if (!result.success)
+    {
+        setBinaryUpToDate(false);
+        QMessageBox::critical(this, "Compilation Error", QString::fromStdString(result.errorMessage));
+        return;
+    }
+
+    _compiledBinary = result.machineCode;
+    _currentLabels = result.reverseSymbolTable;
+
+    setBinaryUpToDate(true);
+}
+
+void MainWindow::onActionLoad()
+{
+    if (_currentState != AppState::EDITING)
+    {
+        assert(false && "Load action triggered in invalid state");
+        return;
+    }
+
+    try
+    {
+        _computer.reset();
+        _computer.loadProgram(_compiledBinary);
+
+        _ui->pushButton_load->setEnabled(false);
+        _lastOutputSize = 0;
+        _ui->plainTextEdit_output->clear();
+        clearBreakpoints();
+        std::queue<int> empty;
+        std::swap(_inputTokens, empty);
+
+        updateFullMemoryTable();
+        updateRegistersFlagsStats();
+        changeState(AppState::IDLE);
+    }
+    catch (const std::exception& e)
+    {
+        QMessageBox::critical(this, "Load Error", e.what());
+    }
 }
 
 // ret true if we should proceed with the action which
@@ -224,114 +346,30 @@ bool MainWindow::promptSaveIfUnsaved()
     return true; // lose changes
 }
 
-void MainWindow::onActionOpen()
+void MainWindow::updateFullMemoryTable()
 {
-    if (!isProgramMutableState())
+    _ui->tableMemory->setUpdatesEnabled(false);
+    _ui->tableMemory_bottom->setUpdatesEnabled(false);
+
+    for (int i = 0; i < Config::MEMORY_SIZE; ++i)
     {
-        assert(false && "Open action triggered in invalid state");
-        return;
-    }
-    if (!promptSaveIfUnsaved())
-    {
-        return;
+        updateSingleMemoryRow(i);
     }
 
-    QString fileName = QFileDialog::getOpenFileName(this, "Open Program", "", "Assembly Files (*.asm *.txt);;All Files (*)");
-    if (fileName.isEmpty())
-    {
-        return;
-    }
-
-    QFile file(fileName);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
-        QMessageBox::critical(this, "Error", "Could not open file.");
-        return;
-    }
-
-    QTextStream in(&file);
-    _ui->plainTextEdit_program->blockSignals(true);
-    _ui->plainTextEdit_program->setPlainText(in.readAll());
-    _ui->plainTextEdit_program->blockSignals(false);
-    file.close();
-
-    _currentFilePath = fileName;
-
-    setUnsavedChanges(false);
-    setWindowTitle(QString("%1 - %2").arg(WINDOW_TITLE_BASE).arg(_currentFilePath));
-    setBinaryUpToDate(false);
-    changeState(AppState::EDITING);
+    _ui->tableMemory->setUpdatesEnabled(true);
+    _ui->tableMemory_bottom->setUpdatesEnabled(true);
 }
 
-void MainWindow::onActionSave()
+void MainWindow::clearBreakpoints()
 {
-    if(!isProgramMutableState())
+    for (int row : _breakpoints)
     {
-        assert(false && "Save action triggered in invalid state");
-        return;
+        _ui->tableMemory->item(row, 0)->setText("");
+        _ui->tableMemory->item(row, 0)->setBackground(Qt::transparent);
+        _ui->tableMemory_bottom->item(row, 0)->setText("");
+        _ui->tableMemory_bottom->item(row, 0)->setBackground(Qt::transparent);
     }
-    QString fileName = _currentFilePath;
-
-    if (fileName.isEmpty())
-    {
-        fileName = QFileDialog::getSaveFileName(this, "Save Program", "", "Assembly Files (*.asm *.txt);;All Files (*)");
-        if (fileName.isEmpty())
-        {
-            return;
-        }
-    }
-
-    QFile file(fileName);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-    {
-        QMessageBox::critical(this, "Error", "Could not save file.");
-        return;
-    }
-
-    QTextStream out(&file);
-    out << _ui->plainTextEdit_program->toPlainText();
-    file.close();
-
-    _currentFilePath = fileName;
-    setUnsavedChanges(false);
-}
-
-void MainWindow::onActionCompile()
-{
-    if(_currentState != AppState::EDITING)
-    {
-        assert(false && "Compile action triggered in invalid state");
-        return;
-    }
-    Assembler assembler;
-    std::string program = _ui->plainTextEdit_program->toPlainText().toStdString();
-
-    AssemblerResult result = assembler.compile(program);
-
-    if (!result.success)
-    {
-        setBinaryUpToDate(false);
-        QMessageBox::critical(this, "Compilation Error", QString::fromStdString(result.errorMessage));
-        return;
-    }
-
-    _compiledBinary = result.machineCode;
-    _currentLabels = result.reverseSymbolTable;
-
-    setBinaryUpToDate(true);
-    QMessageBox::information(this, "Success", "Program compiled successfully.");
-}
-
-void MainWindow::closeEvent(QCloseEvent* event)
-{
-    if (promptSaveIfUnsaved())
-    {
-        event->accept();
-    }
-    else
-    {
-        event->ignore();
-    }
+    _breakpoints.clear();
 }
 
 void MainWindow::updateRegistersFlagsStats()
@@ -374,6 +412,25 @@ void MainWindow::updateSingleMemoryRow(int address)
 
     _ui->tableMemory_bottom->item(address, 2)->setText(valueStr);
     _ui->tableMemory_bottom->item(address, 3)->setText(decodedQStr);
+}
+
+void MainWindow::highlightTableRowsCurrent()
+{
+    int pc = _computer.getCPU().getProgramCounter();
+    int sp = _computer.getCPU().getStackPointer();
+
+    if (_computer.getCPU().isWaitingForInput() && pc > 0) {
+        pc = pc - 1;
+    }
+
+    _ui->tableMemory->clearSelection();
+    _ui->tableMemory_bottom->clearSelection();
+
+    _ui->tableMemory->selectRow(pc);
+    _ui->tableMemory->scrollToItem(_ui->tableMemory->item(pc, 0), QAbstractItemView::PositionAtCenter);
+
+    _ui->tableMemory_bottom->selectRow(sp);
+    _ui->tableMemory_bottom->scrollToItem(_ui->tableMemory_bottom->item(sp, 0), QAbstractItemView::PositionAtCenter);
 }
 
 void MainWindow::changeState(AppState newState)
@@ -498,37 +555,6 @@ bool MainWindow::feedInputIfAvailable()
     return false;
 }
 
-void MainWindow::clearBreakpoints()
-{
-    for (int row : _breakpoints)
-    {
-        _ui->tableMemory->item(row, 0)->setText("");
-        _ui->tableMemory->item(row, 0)->setBackground(Qt::transparent);
-        _ui->tableMemory_bottom->item(row, 0)->setText("");
-        _ui->tableMemory_bottom->item(row, 0)->setBackground(Qt::transparent);
-    }
-    _breakpoints.clear();
-}
-
-void MainWindow::highlightTableRowsCurrent()
-{
-    int pc = _computer.getCPU().getProgramCounter();
-    int sp = _computer.getCPU().getStackPointer();
-
-    if (_computer.getCPU().isWaitingForInput() && pc > 0) {
-        pc = pc - 1;
-    }
-
-    _ui->tableMemory->clearSelection();
-    _ui->tableMemory_bottom->clearSelection();
-
-    _ui->tableMemory->selectRow(pc);
-    _ui->tableMemory->scrollToItem(_ui->tableMemory->item(pc, 0), QAbstractItemView::PositionAtCenter);
-
-    _ui->tableMemory_bottom->selectRow(sp);
-    _ui->tableMemory_bottom->scrollToItem(_ui->tableMemory_bottom->item(sp, 0), QAbstractItemView::PositionAtCenter);
-}
-
 // put input tokens to the queue
 // ret true on success, false on failure (invalid input)
 bool MainWindow::parseInputTokens()
@@ -553,6 +579,231 @@ bool MainWindow::parseInputTokens()
     }
 
     return true;
+}
+
+void MainWindow::onActionEnter()
+{
+    if (_currentState != AppState::WAITING_INPUT)
+    {
+        assert(false && "Enter action triggered in invalid state");
+        return;
+    }
+    if (!_computer.getCPU().isWaitingForInput()) return;
+
+    if (parseInputTokens() && !_inputTokens.empty())
+    {
+        int val = _inputTokens.front();
+        _inputTokens.pop();
+
+        _computer.provideInput(val);
+        updateInputUIFromQueue();
+        updateRegistersFlagsStats();
+
+        changeState(_stateBeforeInput);
+        highlightTableRowsCurrent();
+
+        if (_currentState == AppState::RUNNING) {
+            processRunChunk();
+        }
+        else if (_currentState == AppState::DEBUG_RUNNING)
+        {
+            _debugTimer.start();
+        }
+    }
+}
+
+void MainWindow::onActionRun()
+{
+    if (!(
+        _currentState == AppState::IDLE ||
+        _currentState == AppState::DEBUG_PAUSED
+        ))
+    {
+        assert(false && "Run action triggered in invalid state");
+        return;
+    }
+
+    if (!parseInputTokens())
+    {
+        return;
+    }
+
+    changeState(AppState::RUNNING);
+
+    processRunChunk();
+}
+
+void MainWindow::onActionDebug()
+{
+    if (_currentState != AppState::IDLE)
+    {
+        assert(false && "Debug action triggered in invalid state");
+        return;
+    }
+
+    if (!parseInputTokens())
+    {
+        return;
+    }
+
+    changeState(AppState::DEBUG_RUNNING);
+
+    _debugTimer.start();
+}
+
+void MainWindow::makeComputerStep()
+{
+    try
+    {
+        StepResult result = _computer.step();
+
+        if (_computer.getCPU().isWaitingForInput()) {
+            feedInputIfAvailable();
+        }
+
+        appendNewOutput();
+        updateRegistersFlagsStats();
+        if (result.memoryWasWritten)
+        {
+            updateSingleMemoryRow(result.writtenAddress);
+        }
+        highlightTableRowsCurrent();
+
+        int currentPc = _computer.getCPU().getProgramCounter();
+
+        if (_computer.getCPU().isHalted())
+        {
+            _debugTimer.stop();
+            changeState(AppState::RUN_FINISHED);
+        }
+        else if (_computer.getCPU().isWaitingForInput())
+        {
+            _ui->plainTextEdit_input->clear();
+            _debugTimer.stop();
+            changeState(AppState::WAITING_INPUT);
+        }
+        else if (_breakpoints.count(currentPc))
+        {
+            _debugTimer.stop();
+            changeState(AppState::DEBUG_PAUSED);
+        }
+    }
+    catch (const std::exception& e)
+    {
+        _debugTimer.stop();
+        changeState(AppState::RUN_FINISHED);
+        QMessageBox::critical(this, "Runtime Error", e.what());
+    }
+}
+
+void MainWindow::onActionStep()
+{
+    if (!(_currentState == AppState::DEBUG_PAUSED ||
+        _currentState == AppState::IDLE))
+    {
+        assert(false && "Step action triggered in invalid state");
+        return;
+    }
+
+    if (_currentState == AppState::IDLE && !parseInputTokens())
+    {
+        return;
+    }
+
+    if (_currentState == AppState::IDLE)
+    {
+        changeState(AppState::DEBUG_PAUSED);
+    }
+
+    makeComputerStep();
+}
+
+void MainWindow::onActionContinue()
+{
+    if (_currentState != AppState::DEBUG_PAUSED)
+    {
+        assert(false && "Continue action triggered in invalid state");
+        return;
+    }
+
+    changeState(AppState::DEBUG_RUNNING);
+
+    _debugTimer.start();
+}
+
+void MainWindow::onActionStop()
+{
+    if (!(
+        _currentState == AppState::RUNNING ||
+        _currentState == AppState::DEBUG_RUNNING ||
+        _currentState == AppState::DEBUG_PAUSED ||
+        _currentState == AppState::WAITING_INPUT
+        ))
+    {
+        assert(false && "Stop action triggered in invalid state");
+        return;
+    }
+
+    switch (_currentState)
+    {
+    case AppState::RUNNING:
+        changeState(AppState::RUN_FINISHED);
+        break;
+    case AppState::DEBUG_RUNNING:
+        _debugTimer.stop();
+        changeState(AppState::DEBUG_PAUSED);
+        break;
+    case AppState::DEBUG_PAUSED:
+        changeState(AppState::RUN_FINISHED);
+        break;
+    case AppState::WAITING_INPUT:
+        changeState(AppState::RUN_FINISHED);
+        break;
+    default:
+        break;
+    }
+}
+
+void MainWindow::onActionReset()
+{
+    if (!(
+        _currentState == AppState::RUNNING ||
+        _currentState == AppState::DEBUG_RUNNING ||
+        _currentState == AppState::DEBUG_PAUSED ||
+        _currentState == AppState::WAITING_INPUT ||
+        _currentState == AppState::RUN_FINISHED
+        ))
+    {
+        assert(false && "Reset action triggered in invalid state");
+        return;
+    }
+
+    _debugTimer.stop();
+    _computer.reset();
+    _computer.loadProgram(_compiledBinary);
+
+    _lastOutputSize = 0;
+    _ui->plainTextEdit_output->clear();
+
+    std::queue<int> empty;
+    std::swap(_inputTokens, empty);
+
+    updateFullMemoryTable();
+    updateRegistersFlagsStats();
+    changeState(AppState::IDLE);
+}
+
+void MainWindow::appendNewOutput()
+{
+    const auto& buffer = _computer.getCPU().getOutputBuffer();
+    if (buffer.size() > _lastOutputSize)
+    {
+        for (size_t i = _lastOutputSize; i < buffer.size(); ++i)
+        {
+            _ui->plainTextEdit_output->appendPlainText(QString::number(buffer[i]));
+        }
+        _lastOutputSize = buffer.size();
+    }
 }
 
 void MainWindow::processRunChunk()
@@ -633,248 +884,6 @@ void MainWindow::onDebugTimerTick()
     makeComputerStep();
 }
 
-void MainWindow::onActionRun()
-{
-    if(!(
-        _currentState == AppState::IDLE ||
-        _currentState == AppState::DEBUG_PAUSED
-        ))
-    {
-        assert(false && "Run action triggered in invalid state");
-        return;
-    }
-
-    if (!parseInputTokens())
-    {
-        return;
-    }
-
-    changeState(AppState::RUNNING);
-
-    processRunChunk();
-}
-
-void MainWindow::onActionDebug()
-{
-    if(_currentState != AppState::IDLE)
-    {
-        assert(false && "Debug action triggered in invalid state");
-        return;
-    }
-
-    if (!parseInputTokens())
-    {
-        return;
-    }
-
-    changeState(AppState::DEBUG_RUNNING);
-
-    _debugTimer.start();
-}
-
-void MainWindow::makeComputerStep()
-{
-    try
-    {
-        StepResult result = _computer.step();
-
-        if (_computer.getCPU().isWaitingForInput()) {
-            feedInputIfAvailable();
-        }
-
-        appendNewOutput();
-        updateRegistersFlagsStats();
-        if (result.memoryWasWritten)
-        {
-            updateSingleMemoryRow(result.writtenAddress);
-        }
-        highlightTableRowsCurrent();
-
-        int currentPc = _computer.getCPU().getProgramCounter();
-
-        if (_computer.getCPU().isHalted())
-        {
-            _debugTimer.stop();
-            changeState(AppState::RUN_FINISHED);
-        }
-        else if (_computer.getCPU().isWaitingForInput())
-        {
-            _ui->plainTextEdit_input->clear();
-            _debugTimer.stop();
-            changeState(AppState::WAITING_INPUT);
-        }
-        else if (_breakpoints.count(currentPc))
-        {
-            _debugTimer.stop();
-            changeState(AppState::DEBUG_PAUSED);
-        }
-    }
-    catch (const std::exception& e)
-    {
-        _debugTimer.stop();
-        changeState(AppState::RUN_FINISHED);
-        QMessageBox::critical(this, "Runtime Error", e.what());
-    }
-}
-
-void MainWindow::onActionStep()
-{
-    if(!(_currentState == AppState::DEBUG_PAUSED ||
-        _currentState == AppState::IDLE))
-    {
-        assert(false && "Step action triggered in invalid state");
-        return;
-    }
-
-    if (_currentState == AppState::IDLE && !parseInputTokens())
-    {
-        return;
-    }
-
-    if (_currentState == AppState::IDLE)
-    {
-        changeState(AppState::DEBUG_PAUSED);
-    }
-
-    makeComputerStep();
-}
-
-void MainWindow::onActionContinue()
-{
-    if (_currentState != AppState::DEBUG_PAUSED)
-    {
-        assert(false && "Continue action triggered in invalid state");
-        return;
-    }
-
-    changeState(AppState::DEBUG_RUNNING);
-
-    _debugTimer.start();
-}
-
-void MainWindow::onActionStop()
-{
-    if(!(
-        _currentState == AppState::RUNNING ||
-        _currentState == AppState::DEBUG_RUNNING ||
-        _currentState == AppState::DEBUG_PAUSED ||
-        _currentState == AppState::WAITING_INPUT
-        ))
-    {
-        assert(false && "Stop action triggered in invalid state");
-        return;
-    }
-
-    switch (_currentState)
-    {
-    case AppState::RUNNING:
-        changeState(AppState::RUN_FINISHED);
-        break;
-    case AppState::DEBUG_RUNNING:
-        _debugTimer.stop();
-        changeState(AppState::DEBUG_PAUSED);
-        break;
-    case AppState::DEBUG_PAUSED:
-        changeState(AppState::RUN_FINISHED);
-        break;
-    case AppState::WAITING_INPUT:
-        changeState(AppState::RUN_FINISHED);
-        break;
-    default:
-        break;
-    }
-}
-
-void MainWindow::onActionReset()
-{
-    if (!(
-        _currentState == AppState::RUNNING ||
-        _currentState == AppState::DEBUG_RUNNING ||
-        _currentState == AppState::DEBUG_PAUSED ||
-        _currentState == AppState::WAITING_INPUT ||
-        _currentState == AppState::RUN_FINISHED
-        ))
-    {
-        assert(false && "Reset action triggered in invalid state");
-        return;
-    }
-
-    _debugTimer.stop();
-    _computer.reset();
-    _computer.loadProgram(_compiledBinary);
-
-    _lastOutputSize = 0;
-    _ui->plainTextEdit_output->clear();
-
-    std::queue<int> empty;
-    std::swap(_inputTokens, empty);
-
-    updateFullMemoryTable();
-    updateRegistersFlagsStats();
-    changeState(AppState::IDLE);
-}
-
-void MainWindow::onActionEnter()
-{
-    if(_currentState != AppState::WAITING_INPUT)
-    {
-        assert(false && "Enter action triggered in invalid state");
-        return;
-    }
-    if (!_computer.getCPU().isWaitingForInput()) return;
-
-    if (parseInputTokens() && !_inputTokens.empty())
-    {
-        int val = _inputTokens.front();
-        _inputTokens.pop();
-
-        _computer.provideInput(val);
-        updateInputUIFromQueue();
-        updateRegistersFlagsStats();
-
-        changeState(_stateBeforeInput);
-        highlightTableRowsCurrent();
-
-        if (_currentState == AppState::RUNNING) {
-            processRunChunk();
-        }
-        else if (_currentState == AppState::DEBUG_RUNNING)
-        {
-            _debugTimer.start();
-        }
-    }
-}
-
-void MainWindow::onActionLoad()
-{
-    if(_currentState != AppState::EDITING)
-    {
-        assert(false && "Load action triggered in invalid state");
-        return;
-    }
-
-    try
-    {
-        _computer.reset();
-        _computer.loadProgram(_compiledBinary);
-
-        _ui->pushButton_load->setEnabled(false);
-        _lastOutputSize = 0;
-        _ui->plainTextEdit_output->clear();
-        clearBreakpoints();
-        std::queue<int> empty;
-        std::swap(_inputTokens, empty);
-
-        updateFullMemoryTable();
-        updateRegistersFlagsStats();
-        changeState(AppState::IDLE);
-    }
-    catch (const std::exception& e)
-    {
-        QMessageBox::critical(this, "Load Error", e.what());
-    }
-}
-
 void MainWindow::onMemoryTableClicked(int row, int column)
 {
     if (column == 0)
@@ -900,19 +909,6 @@ void MainWindow::toggleBreakpoint(int row)
         _ui->tableMemory->item(row, 0)->setForeground(Qt::red);
         _ui->tableMemory_bottom->item(row, 0)->setText("⬤");
         _ui->tableMemory_bottom->item(row, 0)->setForeground(Qt::red);
-    }
-}
-
-void MainWindow::appendNewOutput()
-{
-    const auto& buffer = _computer.getCPU().getOutputBuffer();
-    if (buffer.size() > _lastOutputSize)
-    {
-        for (size_t i = _lastOutputSize; i < buffer.size(); ++i)
-        {
-            _ui->plainTextEdit_output->appendPlainText(QString::number(buffer[i]));
-        }
-        _lastOutputSize = buffer.size();
     }
 }
 
