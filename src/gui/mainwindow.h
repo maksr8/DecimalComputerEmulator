@@ -14,7 +14,15 @@ namespace Ui
 
 class CpuStats;
 
-enum class EmulationMode { STOPPED, RUNNING, DEBUGGING };
+enum class AppState {
+    EDITING,
+    IDLE,
+    RUNNING,
+    DEBUG_RUNNING,
+    DEBUG_PAUSED,
+    WAITING_INPUT,
+    RUN_FINISHED
+};
 
 class MainWindow : public QMainWindow
 {
@@ -30,46 +38,58 @@ protected:
 private:
     Ui::MainWindow* _ui;
     CpuStats* _stats;
-    bool _hasUnsavedChanges;
-    bool _hasUncompiledChanges;
-    QString _currentFilePath;
+    bool _hasUnsavedChanges{ false };
+    bool _isBinaryUpToDate{ false };
+    void setUnsavedChanges(bool value);
+    void setBinaryUpToDate(bool value);
+    AppState _currentState{ AppState::EDITING };
+    AppState _stateBeforeInput{ AppState::IDLE };
+    QString _currentFilePath{ "" };
     std::vector<int> _compiledBinary;
     std::unordered_map<int, std::string> _currentLabels;
-    Computer _computer;
-
-    EmulationMode _currentMode;
+    Computer _computer{};
     QTimer _debugTimer;
     std::unordered_set<int> _breakpoints;
     std::queue<int> _inputTokens;
-    size_t _lastOutputSize;
+    size_t _lastOutputSize{ 0 };
 
     void setupMemoryTables();
-    void updateUI(bool fullUpdate = false);
     void setupConnections();
-    bool promptSaveIfUnsaved();
 
-    void setUiInteractionEnabled(bool enabled);
-    void highlightCurrentInstruction();
-    bool parseInputTokens();
-    void processRunChunk();
-    void appendNewOutput();
-    void toggleBreakpoint(int row);
-
+    bool isProgramMutableState() const;
+    void onProgramTextChanged();
     void onActionOpen();
     void onActionSave();
     void onActionCompile();
-    void onProgramTextChanged();
-
     void onActionLoad();
+    bool promptSaveIfUnsaved();
+
+    void updateFullMemoryTable();
+    void clearBreakpoints();
+    void updateRegistersFlagsStats();
+    void updateSingleMemoryRow(int address);
+    void highlightTableRowsCurrent();
+    void changeState(AppState newState);
+    void applyStateToUI();
+
+    void updateInputUIFromQueue();
+    bool feedInputIfAvailable();
+    bool parseInputTokens();
+    void onActionEnter();
     void onActionRun();
     void onActionDebug();
+    void makeComputerStep();
     void onActionStep();
+    void onActionContinue();
     void onActionStop();
     void onActionReset();
-    void onActionEnter();
+    void appendNewOutput();
 
+    void processRunChunk();
     void onDebugTimerTick();
+
     void onMemoryTableClicked(int row, int column);
+    void toggleBreakpoint(int row);
     void onMinStepDurationChanged(const QString& value);
     void onMinStepDurationSliderChanged(int value);
 };

@@ -395,6 +395,12 @@
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
            <widget class="QPushButton" name="pushButton_run">
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="toolTipDuration">
+             <number>-1</number>
+            </property>
             <property name="text">
              <string>Run</string>
             </property>
@@ -402,6 +408,12 @@
           </item>
           <item>
            <widget class="QPushButton" name="pushButton_debug">
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="toolTipDuration">
+             <number>-1</number>
+            </property>
             <property name="text">
              <string>Debug</string>
             </property>
@@ -675,6 +687,36 @@
    <header location="global">QtQuickWidgets/QQuickWidget</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>plainTextEdit_program</tabstop>
+  <tabstop>pushButton_open</tabstop>
+  <tabstop>pushButton_save</tabstop>
+  <tabstop>pushButton_compile</tabstop>
+  <tabstop>pushButton_load</tabstop>
+  <tabstop>tableMemory</tabstop>
+  <tabstop>tableMemory_bottom</tabstop>
+  <tabstop>lineEdit_acc</tabstop>
+  <tabstop>lineEdit_pc</tabstop>
+  <tabstop>lineEdit_ir</tabstop>
+  <tabstop>lineEdit_sp</tabstop>
+  <tabstop>lineEdit_ixr</tabstop>
+  <tabstop>checkBox_overflow</tabstop>
+  <tabstop>checkBox_waitingForInput</tabstop>
+  <tabstop>checkBox_halted</tabstop>
+  <tabstop>pushButton_run</tabstop>
+  <tabstop>pushButton_debug</tabstop>
+  <tabstop>plainTextEdit_input</tabstop>
+  <tabstop>plainTextEdit_output</tabstop>
+  <tabstop>pushButton_enter</tabstop>
+  <tabstop>pushButton_step</tabstop>
+  <tabstop>pushButton_continue</tabstop>
+  <tabstop>pushButton_stop</tabstop>
+  <tabstop>pushButton_reset</tabstop>
+  <tabstop>lineEdit_minStepDuration</tabstop>
+  <tabstop>horizontalSlider_minStepDuration</tabstop>
+  <tabstop>lineEdit_steps</tabstop>
+  <tabstop>pieChartWidget_instructionDistribution</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

@@ -88,9 +88,10 @@ void CPU::updateStats(Config::InstType type)
 
 StepResult CPU::step()
 {
+    StepResult result{};
     if (_halted || _waitingForInput)
     {
-        return;
+        return result;
     }
 
     _lastWrittenAddress = -1;
@@ -275,7 +276,7 @@ StepResult CPU::step()
     default:
         throw std::runtime_error("Unknown opcode");
     }
-    StepResult result;
+    
     if (_lastWrittenAddress != -1)
     {
         result.memoryWasWritten = true;

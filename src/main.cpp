@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
     app.setWindowIcon(QIcon(":/icons/app_icon.ico"));
 
     MainWindow mainWindow;
-	mainWindow.setWindowTitle("Decimal Computer Emulator");
 	mainWindow.show();
 
     return app.exec();
