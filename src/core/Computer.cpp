@@ -25,9 +25,9 @@ void Computer::reset()
     _cpu.reset();
 }
 
-void Computer::step()
+StepResult Computer::step()
 {
-    _cpu.step();
+    return _cpu.step();
 }
 
 void Computer::provideInput(int value)

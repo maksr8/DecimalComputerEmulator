@@ -4,21 +4,7 @@
 #include <cmath>
 
 CPU::CPU(Memory& mem) :
-    _memory{ mem },
-    _accumulator{ 0 },
-    _programCounter{ 0 },
-    _instructionReg{ 0 },
-    _stackPointer{ Config::INITIAL_STACK_POINTER },
-    _indexReg{ 0 },
-    _halted{ false },
-    _waitingForInput{ false },
-    _overflowFlag{ false },
-    _cycles{ 0 },
-    _statALU{ 0 },
-    _statMemory{ 0 },
-    _statControl{ 0 },
-    _statIO{ 0 },
-    _outputBuffer{}
+    _memory{ mem }
 {
 }
 
@@ -38,6 +24,7 @@ void CPU::reset()
     _statControl = 0;
     _statIO = 0;
     _outputBuffer.clear();
+    _currentInstructionDef = nullptr;
 }
 
 void CPU::provideInput(int value)
@@ -77,6 +64,7 @@ int CPU::readMemory(int address) const
 void CPU::writeMemory(int address, int value)
 {
     _memory.write(address, value);
+    _lastWrittenAddress = address;
 }
 
 void CPU::updateStats(Config::InstType type)
@@ -98,13 +86,14 @@ void CPU::updateStats(Config::InstType type)
     }
 }
 
-void CPU::step()
+StepResult CPU::step()
 {
     if (_halted || _waitingForInput)
     {
         return;
     }
 
+    _lastWrittenAddress = -1;
     _instructionReg = readMemory(_programCounter);
     _programCounter++;
     _cycles++;
@@ -286,6 +275,13 @@ void CPU::step()
     default:
         throw std::runtime_error("Unknown opcode");
     }
+    StepResult result;
+    if (_lastWrittenAddress != -1)
+    {
+        result.memoryWasWritten = true;
+        result.writtenAddress = _lastWrittenAddress;
+    }
+    return result;
 }
 
 int CPU::getAccumulator() const

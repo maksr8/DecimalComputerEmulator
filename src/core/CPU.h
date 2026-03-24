@@ -4,13 +4,18 @@
 
 class Memory;
 
+struct StepResult {
+    bool memoryWasWritten{ false };
+    int writtenAddress{ -1 };
+};
+
 class CPU
 {
 public:
     explicit CPU(Memory& mem);
 
     void reset();
-    void step();
+    StepResult step();
     void provideInput(int value);
     void clearOutput();
 
@@ -34,25 +39,26 @@ public:
 private:
     Memory& _memory;
 
-    int _accumulator;
-    int _programCounter;
-    int _instructionReg;
-    int _stackPointer;
-    int _indexReg;
+    int _accumulator{ 0 };
+    int _programCounter{ 0 };
+    int _instructionReg{ 0 };
+    int _stackPointer{ Config::INITIAL_STACK_POINTER };
+    int _indexReg{ 0 };
 
-    bool _halted;
-    bool _waitingForInput;
-    bool _overflowFlag;
+    bool _halted{ false };
+    bool _waitingForInput{ false };
+    bool _overflowFlag{ false };
 
-    int _cycles;
-    int _statALU;
-    int _statMemory;
-    int _statControl;
-    int _statIO;
+    int _cycles{ 0 };
+    int _statALU{ 0 };
+    int _statMemory{ 0 };
+    int _statControl{ 0 };
+    int _statIO{ 0 };
 
-    std::vector<int> _outputBuffer;
+    std::vector<int> _outputBuffer{};
 
-    const Config::InstructionDef* _currentInstructionDef;
+    const Config::InstructionDef* _currentInstructionDef{ nullptr };
+    int _lastWrittenAddress{ -1 };
 
     void setAccumulator(int value);
     void setIndexRegister(int value);

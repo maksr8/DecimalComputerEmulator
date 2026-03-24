@@ -10,7 +10,7 @@ public:
 
     void loadProgram(const std::vector<int>& program);
     void reset();
-    void step();
+    StepResult step();
     void provideInput(int value);
 
     const CPU& getCPU() const;
