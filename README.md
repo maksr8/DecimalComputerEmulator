@@ -238,6 +238,7 @@ Divides the accumulator by the value from memory at the address (operand + index
 
 ## Program example
 
+Calculate GCD of two numbers:
 ```asm
 	INP
 	STA a
