@@ -60,6 +60,7 @@ private:
     void onProgramTextChanged();
     void onActionOpen();
     void onActionSave();
+    void doSave();
     void onActionCompile();
     void onActionLoad();
     bool promptSaveIfUnsaved();

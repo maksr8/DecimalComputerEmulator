@@ -235,8 +235,13 @@ void MainWindow::onActionSave()
         assert(false && "Save action triggered in invalid state");
         return;
     }
-    QString fileName = _currentFilePath;
 
+    doSave();
+}
+
+void MainWindow::doSave()
+{
+    QString fileName;
 
     fileName = QFileDialog::getSaveFileName(this, "Save Program", "",
         "Decimal Assembly(*.dasm);; Standard Assembly(*.asm);; Text Files(*.txt);; All Files(*)");
@@ -334,7 +339,7 @@ bool MainWindow::promptSaveIfUnsaved()
 
     if (reply == QMessageBox::Yes)
     {
-        onActionSave();
+        doSave();
         return !_hasUnsavedChanges;
     }
 
