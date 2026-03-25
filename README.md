@@ -235,3 +235,30 @@ Multiplies the accumulator by the value from memory at the address (operand + in
 DIVX (70, ALU, Yes)
 
 Divides the accumulator by the value from memory at the address (operand + index register).
+
+## Program example
+
+```asm
+	INP
+	STA a
+	INP
+	STA b
+loop:	LDA b
+	BRZ end
+	STA temp
+	LDA a
+	MOD b
+	STA b
+	LDA temp
+	STA a
+	BRA loop
+end:	LDA a
+	OUT
+	HLT
+a:	DAT 0
+b:	DAT 0
+temp:	DAT 0
+```
+
+Notice that DAT pseudo-instruction should be used at the end of your program.
+(play around and find out why!-_-)
