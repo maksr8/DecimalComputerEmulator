@@ -120,7 +120,7 @@ bool Assembler::runPassTwo()
     {
         const ParsedInstruction& instruction = _parsedInstructions[i];
 
-        if (instruction.mnemonic == "DAT")
+        if (instruction.mnemonic == Config::DAT_MNEMONIC)
         {
             int value{ 0 };
             if (!instruction.operand.empty())
@@ -141,7 +141,7 @@ bool Assembler::runPassTwo()
 
                 if (std::abs(value) >= Config::OVERFLOW_LIMIT)
                 {
-                    _errorMessage = "DAT value '" + std::to_string(value) + "' exceeds machine limits (+-" + std::to_string(Config::OVERFLOW_LIMIT - 1) + ") at line " + std::to_string(instruction.originalLine);
+                    _errorMessage = std::string(Config::DAT_MNEMONIC) + " value '" + std::to_string(value) + "' exceeds machine limits (+-" + std::to_string(Config::OVERFLOW_LIMIT - 1) + ") at line " + std::to_string(instruction.originalLine);
                     return false;
                 }
             }

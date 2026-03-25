@@ -55,6 +55,8 @@ namespace Config
         DIVX = 70,
     };
 
+    constexpr std::string_view DAT_MNEMONIC{ "DAT" };
+
     enum class InstType {
         ALU,
         MEMORY,

@@ -14,17 +14,32 @@ std::string Disassembler::decode(int machineWord)
 
         if (def->hasOperand)
         {
-            return mnemonic + " " + std::to_string(operand);
+            std::string result;
+            result.reserve(mnemonic.size() + 1 + 11); // use 11 to be sure any int can fit
+            result += mnemonic;
+            result += ' ';
+            result += std::to_string(operand);
+            return result;
         }
         else
         {
             if (operand != 0)
             {
-                return "DAT " + std::to_string(machineWord);
+                std::string result;
+                result.reserve(Config::DAT_MNEMONIC.size() + 1 + 11);
+                result.append(Config::DAT_MNEMONIC.data(), Config::DAT_MNEMONIC.size());
+                result += ' ';
+                result += std::to_string(machineWord);
+                return result;
             }
             return mnemonic;
         }
     }
 
-    return "DAT " + std::to_string(machineWord);
+    std::string result;
+    result.reserve(Config::DAT_MNEMONIC.size() + 1 + 11);
+    result.append(Config::DAT_MNEMONIC.data(), Config::DAT_MNEMONIC.size());
+    result += ' ';
+    result += std::to_string(machineWord);
+    return result;
 }
