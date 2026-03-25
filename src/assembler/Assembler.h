@@ -23,7 +23,7 @@ class Assembler
 public:
     Assembler();
 
-    AssemblerResult compile(const std::string& sourceCode);
+    AssemblerResult assemble(const std::string& sourceCode);
 
 private:
     std::unordered_map<std::string, int> _symbolTable;

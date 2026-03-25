@@ -116,9 +116,9 @@
            </widget>
           </item>
           <item row="3" column="0">
-           <widget class="QPushButton" name="pushButton_compile">
+           <widget class="QPushButton" name="pushButton_assemble">
             <property name="text">
-             <string>Compile</string>
+             <string>Assemble</string>
             </property>
            </widget>
           </item>
@@ -691,7 +691,7 @@
   <tabstop>plainTextEdit_program</tabstop>
   <tabstop>pushButton_open</tabstop>
   <tabstop>pushButton_save</tabstop>
-  <tabstop>pushButton_compile</tabstop>
+  <tabstop>pushButton_assemble</tabstop>
   <tabstop>pushButton_load</tabstop>
   <tabstop>tableMemory</tabstop>
   <tabstop>tableMemory_bottom</tabstop>

@@ -45,7 +45,7 @@ private:
     AppState _currentState{ AppState::EDITING };
     AppState _stateBeforeInput{ AppState::IDLE };
     QString _currentFilePath{ "" };
-    std::vector<int> _compiledBinary;
+    std::vector<int> _assembledBinary;
     std::unordered_map<int, std::string> _currentLabels;
     Computer _computer{};
     QTimer _debugTimer;
@@ -61,7 +61,7 @@ private:
     void onActionOpen();
     void onActionSave();
     void doSave();
-    void onActionCompile();
+    void onActionAssemble();
     void onActionLoad();
     bool promptSaveIfUnsaved();
 

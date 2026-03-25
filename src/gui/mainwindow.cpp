@@ -19,7 +19,7 @@ MainWindow::MainWindow(QWidget* parent) :
     QMainWindow{ parent },
     _ui{ new Ui::MainWindow },
     _stats{ new CpuStats{ this } },
-    _compiledBinary(Config::MEMORY_SIZE, 0)
+    _assembledBinary(Config::MEMORY_SIZE, 0)
 {
     _ui->setupUi(this);
 
@@ -147,7 +147,7 @@ void MainWindow::setupConnections()
 {
     connect(_ui->pushButton_open, &QPushButton::clicked, this, &MainWindow::onActionOpen);
     connect(_ui->pushButton_save, &QPushButton::clicked, this, &MainWindow::onActionSave);
-    connect(_ui->pushButton_compile, &QPushButton::clicked, this, &MainWindow::onActionCompile);
+    connect(_ui->pushButton_assemble, &QPushButton::clicked, this, &MainWindow::onActionAssemble);
     connect(_ui->pushButton_load, &QPushButton::clicked, this, &MainWindow::onActionLoad);
 
     connect(_ui->plainTextEdit_program, &QPlainTextEdit::textChanged, this, &MainWindow::onProgramTextChanged);
@@ -266,26 +266,26 @@ void MainWindow::doSave()
     setWindowTitle(QString("%1 - %2").arg(WINDOW_TITLE_BASE).arg(_currentFilePath));
 }
 
-void MainWindow::onActionCompile()
+void MainWindow::onActionAssemble()
 {
     if (_currentState != AppState::EDITING)
     {
-        assert(false && "Compile action triggered in invalid state");
+        assert(false && "Assemble action triggered in invalid state");
         return;
     }
     Assembler assembler;
     std::string program = _ui->plainTextEdit_program->toPlainText().toStdString();
 
-    AssemblerResult result = assembler.compile(program);
+    AssemblerResult result = assembler.assemble(program);
 
     if (!result.success)
     {
         setBinaryUpToDate(false);
-        QMessageBox::critical(this, "Compilation Error", QString::fromStdString(result.errorMessage));
+        QMessageBox::critical(this, "Assembler Error", QString::fromStdString(result.errorMessage));
         return;
     }
 
-    _compiledBinary = result.machineCode;
+    _assembledBinary = result.machineCode;
     _currentLabels = result.reverseSymbolTable;
 
     setBinaryUpToDate(true);
@@ -302,7 +302,7 @@ void MainWindow::onActionLoad()
     try
     {
         _computer.reset();
-        _computer.loadProgram(_compiledBinary);
+        _computer.loadProgram(_assembledBinary);
 
         _ui->pushButton_load->setEnabled(false);
         _lastOutputSize = 0;
@@ -455,7 +455,7 @@ void MainWindow::applyStateToUI()
 {
     _ui->pushButton_open->setEnabled(false);
     _ui->pushButton_save->setEnabled(false);
-    _ui->pushButton_compile->setEnabled(false);
+    _ui->pushButton_assemble->setEnabled(false);
     _ui->pushButton_load->setEnabled(false);
 
     _ui->pushButton_run->setEnabled(false);
@@ -476,7 +476,7 @@ void MainWindow::applyStateToUI()
     {
     case AppState::EDITING:
         _ui->plainTextEdit_program->setReadOnly(false);
-        _ui->pushButton_compile->setEnabled(!_isBinaryUpToDate);
+        _ui->pushButton_assemble->setEnabled(!_isBinaryUpToDate);
         _ui->pushButton_open->setEnabled(true);
         _ui->pushButton_save->setEnabled(true);
         _ui->pushButton_load->setEnabled(_isBinaryUpToDate);
@@ -785,7 +785,7 @@ void MainWindow::onActionReset()
 
     _debugTimer.stop();
     _computer.reset();
-    _computer.loadProgram(_compiledBinary);
+    _computer.loadProgram(_assembledBinary);
 
     _lastOutputSize = 0;
     _ui->plainTextEdit_output->clear();

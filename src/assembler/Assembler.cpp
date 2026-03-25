@@ -19,7 +19,7 @@ void Assembler::reset()
     _errorMessage = "";
 }
 
-AssemblerResult Assembler::compile(const std::string& sourceCode)
+AssemblerResult Assembler::assemble(const std::string& sourceCode)
 {
     reset();
     AssemblerResult result;
