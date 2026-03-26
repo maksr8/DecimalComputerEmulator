@@ -1,4 +1,4 @@
-# Decimal Computer Emulator
+# Decimal Computer Simulator
 
 This educational tool designed to emulate a single-address decimal computer architecture. This project provides a complete environment for writing, compiling and debugging assembly code with real-time hardware visualization.
 
@@ -29,7 +29,7 @@ src/gui/ — Graphical user interface and Qt Graphs integration
 
 assets/ — Application icons, and Windows resource files
 
-## Emulator uses own assembly grammar
+## Simulator uses own assembly grammar
 
 program ::= { line }
 

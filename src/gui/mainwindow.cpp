@@ -13,7 +13,7 @@
 #include "../assembler/Disassembler.h"
 
 constexpr int RUN_CHUNK_SIZE{ 5000 };
-constexpr const char* WINDOW_TITLE_BASE{ "Decimal Computer Emulator" };
+constexpr const char* WINDOW_TITLE_BASE{ "Decimal Computer Simulator" };
 
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow{ parent },
