@@ -1,9 +1,9 @@
 # Decimal Computer Simulator
 
-This educational tool designed to emulate a single-address decimal computer architecture. This project provides a complete environment for writing, compiling and debugging assembly code with real-time hardware visualization.
+This educational tool designed to simulate a single-address decimal computer architecture. This project provides a complete environment for writing, compiling and debugging assembly code with real-time hardware visualization.
 
 ## Key Features
-* **CPU and Memory Emulation:** Modeling of decimal registers (Accumulator, Program Counter, Instruction Register, Stack Pointer, Index Register) and flags (overflow, waiting for input, halted). Instruction format: 00111, where 00 are digits for the opcode and 111 - for the address (which means that the memory has a size of 1000 cells)
+* **CPU and Memory Simulation:** Modeling of decimal registers (Accumulator, Program Counter, Instruction Register, Stack Pointer, Index Register) and flags (overflow, waiting for input, halted). Instruction format: 00111, where 00 are digits for the opcode and 111 - for the address (which means that the memory has a size of 1000 cells)
 * **Assembler:** Convert human-readable assembly instructions into machine code
 * **Interactive Debugger:** Support for step-by-step execution, breakpoints and adjustable minimum step duration
 * **Statistics:** Real-time monitoring of ALU, Memory, Flow Control, and I/O instruction distribution using Qt Graph
